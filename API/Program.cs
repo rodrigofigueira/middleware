@@ -1,4 +1,4 @@
-using System.Diagnostics;
+using API.Middlewares;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -11,29 +11,7 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-app.Use(async (context, next) =>
-{
-    var timer = new Stopwatch();
-    timer.Start();
-
-    string protocol = context.Request.IsHttps ? "https" : "http";
-    string traceIdentifier = context.TraceIdentifier;
-
-    Console.WriteLine($"\n[START] TraceIdentifier: {traceIdentifier}");
-    Console.WriteLine($"[INFO] Path: {context.Request.Path}");
-    Console.WriteLine($"[INFO] Method: {context.Request.Method}");
-    Console.WriteLine($"[INFO] Protocol: {protocol}");
-    Console.WriteLine($"[INFO] Host: {context.Request.Host}");
-    Console.WriteLine($"[INFO] Agent: {context.Request.Headers.UserAgent}");
-
-    await next(context);
-    timer.Stop();
-    var timeTaken = timer.Elapsed;
-
-    Console.WriteLine($"[PERFORMANCE] The request {traceIdentifier} took {timeTaken}");
-    Console.WriteLine($"[INFO] Status Code Response: {context.Response.StatusCode}");
-    Console.WriteLine($"[END] The request {traceIdentifier}");
-});
+app.UseMiddleware<LoggingMiddleware>();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

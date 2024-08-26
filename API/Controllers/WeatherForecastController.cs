@@ -44,5 +44,11 @@ namespace API.Controllers
             })
             .ToArray();
         }
+
+        [HttpPost]
+        public IActionResult Post(WeatherForecast weatherForecast)
+        {
+            return Ok(weatherForecast);
+        }
     }
 }
