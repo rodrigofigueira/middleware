@@ -50,5 +50,18 @@ namespace API.Controllers
         {
             return Ok(weatherForecast);
         }
+
+        [HttpGet]
+        [Route("divideby/{divisor}")]
+        public IActionResult Division([FromRoute] int divisor)
+        {
+            if (divisor == 0)
+            {
+                throw new ArgumentException("0 is invalid");
+            }
+
+            var result = 10 / divisor;
+            return Ok(result);
+        }
     }
 }

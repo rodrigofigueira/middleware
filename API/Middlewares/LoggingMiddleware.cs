@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc.Controllers;
 using System.Diagnostics;
 using System.Text;
+using System.Text.Json;
 
 namespace API.Middlewares
 {
@@ -18,19 +19,43 @@ namespace API.Middlewares
             var _eventId = _eventLookup.TryGetValue(key, out var foundEventId) ? foundEventId : new EventId(-1, key);
             string method = context.Request.Method;
 
-
-            if (method == "POST" || method == "PUT" || method == "PATCH")
+            try
             {
-                var payload = await ReadRequestBodyAsync(context.Request);
-                logger.LogInformation(_eventId, "Payload: {payload}", payload);
-                context.Request.Body.Position = 0;
-            }
+                if (method == "POST" || method == "PUT" || method == "PATCH")
+                {
+                    var payload = await ReadRequestBodyAsync(context.Request);
+                    logger.LogInformation(_eventId, "Payload: {payload}", payload);
+                    context.Request.Body.Position = 0;
+                }
 
-            await next(context);
-            timer.Stop();
-            timeTaken = timer.Elapsed;
-            logger.LogInformation(_eventId, "The request {traceIdentifier} took {timeTaken}", traceIdentifier, timeTaken);
-            logger.LogInformation(_eventId, "Status Code Response: {statusCode}", context.Response.StatusCode);
+                await next(context);
+                timer.Stop();
+                timeTaken = timer.Elapsed;
+                logger.LogInformation(_eventId, "The request {traceIdentifier} took {timeTaken}", traceIdentifier, timeTaken);
+                logger.LogInformation(_eventId, "Status Code Response: {statusCode}", context.Response.StatusCode);
+            }
+            catch (Exception ex)
+            {
+                timer.Stop();
+                timeTaken = timer.Elapsed;
+                logger.LogInformation(_eventId, "The request {traceIdentifier} took {timeTaken}", traceIdentifier, timeTaken);
+                logger.LogInformation(_eventId, "The request {traceIdentifier}: throws a Exception {ex}", traceIdentifier, ex.Message);
+
+                ErrorResponse errorResponse;
+
+                if (ex is ArgumentException)
+                {
+                    errorResponse = new(400, $"Invalid argument: {ex.Message}");
+                }
+                else
+                {
+                    errorResponse = new(500, "Internal server error", ex.ToString());
+                }
+
+                context.Response.StatusCode = errorResponse.StatusCode;
+                context.Response.ContentType = "application/json";
+                await context.Response.WriteAsync(JsonSerializer.Serialize(errorResponse));
+            }
         }
 
         private static string CreateKeyForLookup(HttpContext context)
